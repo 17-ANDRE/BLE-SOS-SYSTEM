@@ -11,8 +11,8 @@
 #include <BLE2902.h>
 
 // BLE UUIDs
-#define SERVICE_UUID  "12345678-1234-1234-1234-1234567890ab"
-#define SOS_CHAR_UUID "abcd1234-5678-1234-5678-abcdef123456"
+#define SERVICE_UUID  "524208a3-bb12-46e1-bdb4-7a080a8c5739"
+#define SOS_CHAR_UUID "cd0e8ecb-44b2-4319-8116-8523c80ba903"
 
 BLECharacteristic *sosCharacteristic = nullptr;
 
