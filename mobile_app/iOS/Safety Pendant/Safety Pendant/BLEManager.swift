@@ -99,7 +99,7 @@ extension BLEManager: CBPeripheralDelegate {
               let value = String(data: data, encoding: .utf8) else { return }
 
         if value == "1" {
-            statusText = "🚨 SOS BUTTON PRESSED"
+            statusText = "SOS BUTTON PRESSED"
         } else {
             statusText = "Button released"
         }
