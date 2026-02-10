@@ -1,9 +1,22 @@
+# macOS
 .DS_Store
-/build
-DerivedData/
+.AppleDouble
+.LSOverride
+
+# Xcode
+*.xcuserdata
 *.xcuserstate
-.DS_Store
-*.xcuserdatad
-*.xcuserstate
+*.moved-aside
 DerivedData/
-build/
+*.hmap
+*.ipa
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+Packages/
+
+# Arduino
+*.tmp
+*.bak
+*.swp
