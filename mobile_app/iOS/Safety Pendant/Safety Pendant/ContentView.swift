@@ -21,10 +21,18 @@ struct ContentView: View {
                 .foregroundColor(.white)
                 .padding()
     //Button to scan for the pendant
-            Button("Scan for Pendant") {
-                bleManager.startScan()
+            if !bleManager.isConnected {
+                Button("Scan for Pendant") {
+                    bleManager.startScan()
+                }
+                .padding()
+            } else {
+                Button("Disconnect Device") {
+                    bleManager.disconnect()
+                }
+                .padding()
+                .foregroundColor(.red)
             }
-            .padding()
         }
     //Prepare haptics when ContentView is loaded on the screen
         .onAppear{

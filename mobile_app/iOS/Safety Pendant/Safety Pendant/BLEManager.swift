@@ -12,6 +12,7 @@ import Combine    //To update the UI
 class BLEManager: NSObject, ObservableObject {
     
     @Published var statusText = "Initializing Bluetooth…" //message when app is opened
+    @Published var isConnected = false   //Connection property
     
     private var centralManager: CBCentralManager!  // Manager to scan and connect to BLE peripherals
     private var sosPeripheral: CBPeripheral? //peripheral property
@@ -40,8 +41,24 @@ extension BLEManager: CBCentralManagerDelegate {
     }
     // function called when the scan button is hit on the screen
     func startScan() {
+        // Resetting peripheral
+             sosPeripheral = nil
+             isConnected = false
         statusText = "Scanning for Safety Pendant…"
         centralManager.scanForPeripherals(withServices: [sosServiceUUID], options: nil)
+        
+        //Stop scanning timer to prevent infinite scanning.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+            guard let self = self, self.sosPeripheral == nil else { return }
+            self.centralManager.stopScan()
+            self.statusText = "Unable to find device, Please make sure device is nearby and try again."
+        }
+    }
+    //function for when the disconnect button is hit
+    func disconnect() {
+        if let peripheral = sosPeripheral {
+            centralManager.cancelPeripheralConnection(peripheral)
+        }
     }
     //Function for each time a peripheral is discovered
     func centralManager(_ central: CBCentralManager,
@@ -63,15 +80,26 @@ extension BLEManager: CBCentralManagerDelegate {
     }
     //function call once the device is successfully connected
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        isConnected = true
         statusText = "Connected to Safety Pendant"
         peripheral.delegate = self
         peripheral.discoverServices([sosServiceUUID])
     }
-}
+    func centralManager(_ central: CBCentralManager,
+                        didDisconnectPeripheral peripheral: CBPeripheral,
+                        error: Error?) {
+        isConnected = false
+        statusText = "Device Disconnected" //for a short time
 
+        //Resetting the status to Scan for pendant after 1.5 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            self.statusText = "Scan for Pendant"
+        }
+    }
+}
 //Delegate to receive events from microcontroller
 extension BLEManager: CBPeripheralDelegate {
-// function call to discover SOS characteristic
+    // function call to discover SOS characteristic
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard let services = peripheral.services else { return }
         for service in services {
@@ -83,7 +111,7 @@ extension BLEManager: CBPeripheralDelegate {
             }
         }
     }
-// function call after characteristics are reported
+    // function call after characteristics are reported
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         guard let characteristics = service.characteristics else { return }
         for characteristic in characteristics {
@@ -93,7 +121,7 @@ extension BLEManager: CBPeripheralDelegate {
             }
         }
     }
-//function call for notifications
+    //function call for notifications
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         guard let data = characteristic.value,
               let value = String(data: data, encoding: .utf8) else { return }
@@ -105,3 +133,4 @@ extension BLEManager: CBPeripheralDelegate {
         }
     }
 }
+
