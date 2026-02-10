@@ -22,6 +22,18 @@ unsigned long lastSOSTime = 0;
 bool buttonPressed = false;
 bool sosSent = false;
 
+//Ensures that after disconnecting, advertisment restarts
+class MyServerCallbacks: public BLEServerCallbacks {
+  void onConnect(BLEServer* pServer) {
+    Serial.println("Client connected");
+  }
+
+  void onDisconnect(BLEServer* pServer) {
+    Serial.println("Client disconnected, restarting advertising");
+    pServer->getAdvertising()->start();  // restart advertising immediately
+  }
+};
+
 void setup() {
   Serial.begin(115200);
 
@@ -33,6 +45,7 @@ void setup() {
   // BLE setup
   BLEDevice::init("Safety Pendant");
   BLEServer *server = BLEDevice::createServer();
+  server->setCallbacks(new MyServerCallbacks()); //ensure device keeps advertising after disconnect
   BLEService *service = server->createService(SERVICE_UUID);
 
   sosCharacteristic = service->createCharacteristic(
