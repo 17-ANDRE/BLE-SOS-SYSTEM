@@ -38,10 +38,10 @@ struct ContentView: View {
         .onAppear{
             prepareHaptics()
         }
-        //Listen for changes in BLEManager status text
-        .onChange(of: bleManager.statusText) {
+        //Listen for changes in BLEManager trigger
+        .onChange(of: bleManager.sosTriggered) { oldValue,newValue in
             // Trigger SOS actions when button pressed
-            if bleManager.statusText.contains("SOS BUTTON PRESSED") {
+            if newValue {
                 triggerHaptic()
                 showingAlert = true
             }

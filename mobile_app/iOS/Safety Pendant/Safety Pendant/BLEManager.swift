@@ -14,6 +14,8 @@ class BLEManager: NSObject, ObservableObject {
     @Published var statusText = "Initializing Bluetooth…" //message when app is opened
     @Published var isConnected = false   //Connection property
     
+    @Published var sosTriggered = false  //defines state of the system
+    
     private var centralManager: CBCentralManager!  // Manager to scan and connect to BLE peripherals
     private var sosPeripheral: CBPeripheral? //peripheral property
     
@@ -125,11 +127,11 @@ extension BLEManager: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         guard let data = characteristic.value,
               let value = String(data: data, encoding: .utf8) else { return }
-
+    //Have boolean state control logic
         if value == "1" {
-            statusText = "SOS BUTTON PRESSED"
+            sosTriggered = true
         } else {
-            statusText = "Button released"
+            sosTriggered = false
         }
     }
 }
