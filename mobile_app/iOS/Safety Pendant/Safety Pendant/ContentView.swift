@@ -71,13 +71,33 @@ struct ContentView: View {
     // Play a short vibration
     func triggerHaptic() {
         guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else { return }
+        
+        // Safety net in case of hapticEngine fail
+        if engine == nil {
+            engine = try? CHHapticEngine()
+        }
+
+        try? engine?.start()
+        
         var events = [CHHapticEvent]()
         
-        // vibration intensity and sharpness
-        let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1)
-        let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 1)
-        let event = CHHapticEvent(eventType: .hapticTransient, parameters: [intensity, sharpness], relativeTime: 0)
-        events.append(event)
+        // stronger pattern of vibration
+        for i in 0..<3 {
+            let startTime = Double(i) * 0.4 // Spaced 0.4 seconds apart
+            
+            // High intensity and High sharpness (1.0) for an aggressive feel
+            let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0)
+            let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 1.0)
+            
+            // Ensures app has a long and heavy vibration not a tap
+            let event = CHHapticEvent(
+                eventType: .hapticContinuous,
+                parameters: [intensity, sharpness],
+                relativeTime: startTime,
+                duration: 0.5
+            )
+            events.append(event)
+        }
         
         do {
             let pattern = try CHHapticPattern(events: events, parameters: [])
