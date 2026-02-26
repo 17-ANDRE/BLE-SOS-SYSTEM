@@ -23,10 +23,16 @@ class BLEManager: NSObject, ObservableObject {
     private let sosServiceUUID = CBUUID(
         string: "524208a3-bb12-46e1-bdb4-7a080a8c5739"
     )
+    
+    // Handling Automatic reconnection
+       private var userDisconnected = false           // Tracks if user manually disconnected
+       private var reconnectTimer: Timer?             // Timer to throttle auto-reconnect attempts
+       private let reconnectInterval: TimeInterval = 5.0 // Seconds between auto-reconnect attempts
+    
     //initializing the central manager
     override init() {
         super.init()
-        centralManager = CBCentralManager(delegate: self, queue: nil) //receives central manager callbacks
+        centralManager = CBCentralManager(delegate: self, queue: nil, options: [CBCentralManagerOptionRestoreIdentifierKey: "SafetyPendantCentral"]) //receives central manager callbacks & Allows iOS to relaunch app in background
     }
 }
 extension BLEManager: CBCentralManagerDelegate {
@@ -46,6 +52,8 @@ extension BLEManager: CBCentralManagerDelegate {
         // Resetting peripheral
              sosPeripheral = nil
              isConnected = false
+        //checking whether the user disconnected
+             userDisconnected = false
         statusText = "Scanning for Safety Pendant…"
         centralManager.scanForPeripherals(withServices: [sosServiceUUID], options: nil)
         
@@ -58,6 +66,9 @@ extension BLEManager: CBCentralManagerDelegate {
     }
     //function for when the disconnect button is hit
     func disconnect() {
+        userDisconnected = true  // User intentionally disconnected
+        reconnectTimer?.invalidate()  // Stop any pending reconnect attempts
+        
         if let peripheral = sosPeripheral {
             centralManager.cancelPeripheralConnection(peripheral)
         }
@@ -91,11 +102,42 @@ extension BLEManager: CBCentralManagerDelegate {
                         didDisconnectPeripheral peripheral: CBPeripheral,
                         error: Error?) {
         isConnected = false
-        statusText = "Device Disconnected" //for a short time
+        // Scenario 1: User manually disconnected
+        if userDisconnected {
+            statusText = "Device Disconnected"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                self.statusText = "Scan for Pendant"
+            }
+            userDisconnected = false  // Reset for future disconnects
+            return
+        }
 
-        //Resetting the status to Scan for pendant after 1.5 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            self.statusText = "Scan for Pendant"
+        //Scenario 2: Unexpected disconnect (out of range, signal drop, etc.)
+        statusText = "Device out of range…"
+        reconnectTimer?.invalidate()  // Prevent multiple auto reconnecting attempts
+        reconnectTimer = Timer.scheduledTimer(withTimeInterval: reconnectInterval,
+                                              repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+
+            // Only try reconnecting if still disconnected
+            if !self.isConnected {
+                self.statusText = "Reconnecting…"
+                self.startScan()
+            }
+        }
+    }
+    
+    //Function call to ensure that the app regains peripheral reference if app is killed.
+    func centralManager(_ central: CBCentralManager,
+                        willRestoreState dict: [String : Any]) {
+
+        if let peripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral],
+           let restoredPeripheral = peripherals.first {
+
+            sosPeripheral = restoredPeripheral
+            sosPeripheral?.delegate = self
+
+            statusText = "Restored connection"
         }
     }
 }
@@ -127,7 +169,7 @@ extension BLEManager: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         guard let data = characteristic.value,
               let value = String(data: data, encoding: .utf8) else { return }
-    //Have boolean state control logic
+    //Have boolean state 
         if value == "1" {
             sosTriggered = true
         } else {
