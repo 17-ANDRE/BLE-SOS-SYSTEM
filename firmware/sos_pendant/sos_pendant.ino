@@ -15,22 +15,25 @@
 #define SOS_CHAR_UUID "cd0e8ecb-44b2-4319-8116-8523c80ba903"
 
 BLECharacteristic *sosCharacteristic = nullptr;
+BLEAdvertising *advertising = nullptr;      // advertising set to global to enable auto reconnectiom
 
 unsigned long pressStart = 0;
 unsigned long lastSOSTime = 0;
 
 bool buttonPressed = false;
 bool sosSent = false;
+bool restartAdvertising = false;
 
-//Ensures that after disconnecting, advertisment restarts
+//Advertising handling
 class MyServerCallbacks: public BLEServerCallbacks {
-  void onConnect(BLEServer* pServer) {
+  //Ensures that advertising stops after connection
+  void onConnect(BLEServer* pServer) { 
     Serial.println("Client connected");
   }
-
+  //Ensures that after disconnecting, advertisment restarts
   void onDisconnect(BLEServer* pServer) {
     Serial.println("Client disconnected, restarting advertising");
-    pServer->getAdvertising()->start();  // restart advertising immediately
+    restartAdvertising = true;  // restart advertising immediately
   }
 };
 
@@ -59,14 +62,26 @@ void setup() {
 
   service->start();
 
-  BLEAdvertising *advertising = BLEDevice::getAdvertising();
+  advertising = BLEDevice::getAdvertising();  //Uses advertising global variable
   advertising->addServiceUUID(SERVICE_UUID);
+
+  //Preferred connection parameters while advertising
+  advertising->setMinPreferred(0x06);  
+  advertising->setMinPreferred(0x12);
+
   advertising->start();
 
   Serial.println("BLE ready and advertising");
 }
 
 void loop() {
+  // Restart advertising safely after disconnect
+  if (restartAdvertising) {
+    restartAdvertising = false;
+    delay(250);   // allows BLE stack to fully reset
+    advertising->start();
+    Serial.println("Advertising restarted");
+}
   int buttonState = digitalRead(BUTTON_PIN);
 
   if (buttonState == LOW) { // Button pressed
