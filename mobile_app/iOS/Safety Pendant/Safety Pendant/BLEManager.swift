@@ -8,6 +8,9 @@
 import Foundation
 import CoreBluetooth //SWIFT's BLE operator
 import Combine    //To update the UI
+import UserNotifications //To add banner alerts
+import AudioToolbox //To implement background vibrations
+
 //class for the entire BLE Management(scanning,connecting and notifications)
 class BLEManager: NSObject, ObservableObject {
     
@@ -34,6 +37,31 @@ class BLEManager: NSObject, ObservableObject {
         super.init()
         centralManager = CBCentralManager(delegate: self, queue: nil, options: [CBCentralManagerOptionRestoreIdentifierKey: "SafetyPendantCentral"]) //receives central manager callbacks & Allows iOS to relaunch app in background
     }
+    
+//To request notification permission for alerts and sounds
+    func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+            if granted { print("Notifications allowed") }
+        }
+    }
+
+    func sendSOSNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "SOS ALERT"
+        content.body = "HELP! DEVICE PRESSED!"
+        content.sound = UNNotificationSound.default
+        
+        // Background vibration matching the CoreHaptic in-app
+            for i in 0..<3 {
+                let delay = Double(i) * 0.4
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+                }
+            }
+
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
 }
 extension BLEManager: CBCentralManagerDelegate {
     //Function for state change
@@ -49,6 +77,8 @@ extension BLEManager: CBCentralManagerDelegate {
     }
     // function called when the scan button is hit on the screen
     func startScan() {
+        // Stop any previous scans
+           centralManager.stopScan()
         // Resetting peripheral
              sosPeripheral = nil
              isConnected = false
@@ -172,6 +202,7 @@ extension BLEManager: CBPeripheralDelegate {
     //Have boolean state 
         if value == "1" {
             sosTriggered = true
+            sendSOSNotification()
         } else {
             sosTriggered = false
         }

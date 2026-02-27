@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-// vibration feedback
+// in-app vibration feedback
 import CoreHaptics
 
 struct ContentView: View {
@@ -18,7 +18,7 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 20) {
             Text(bleManager.statusText)
-                .foregroundColor(.white)
+                .foregroundColor(.gray)
                 .padding()
     //Button to scan for the pendant
             if !bleManager.isConnected {
@@ -34,8 +34,9 @@ struct ContentView: View {
                 .foregroundColor(.red)
             }
         }
-    //Prepare haptics when ContentView is loaded on the screen
+    //Prepare haptics & initially ask for notification permissions when ContentView is loaded on the screen
         .onAppear{
+            bleManager.requestNotificationPermission() //permission pop-up
             prepareHaptics()
         }
         //Listen for changes in BLEManager trigger
