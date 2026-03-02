@@ -10,6 +10,7 @@ import CoreBluetooth //SWIFT's BLE operator
 import Combine    //To update the UI
 import UserNotifications //To add banner alerts
 import AudioToolbox //To implement background vibrations
+import CoreLocation //To get location of the user
 
 //class for the entire BLE Management(scanning,connecting and notifications)
 class BLEManager: NSObject, ObservableObject {
@@ -22,6 +23,8 @@ class BLEManager: NSObject, ObservableObject {
     private var centralManager: CBCentralManager!  // Manager to scan and connect to BLE peripherals
     private var sosPeripheral: CBPeripheral? //peripheral property
     
+    private var locationManager: CLLocationManager?
+    private var latestLocation: CLLocation?
     // UUIDs
     private let sosServiceUUID = CBUUID(
         string: "524208a3-bb12-46e1-bdb4-7a080a8c5739"
@@ -36,6 +39,12 @@ class BLEManager: NSObject, ObservableObject {
     override init() {
         super.init()
         centralManager = CBCentralManager(delegate: self, queue: nil, options: [CBCentralManagerOptionRestoreIdentifierKey: "SafetyPendantCentral"]) //receives central manager callbacks & Allows iOS to relaunch app in background
+        
+        //setting up the GPS system
+        locationManager = CLLocationManager()
+        locationManager?.delegate = self
+        locationManager?.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager?.requestAlwaysAuthorization()
     }
     
 //To request notification permission for alerts and sounds
@@ -61,6 +70,9 @@ class BLEManager: NSObject, ObservableObject {
 
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
+    }
+    func grabLocationOnce() {
+        locationManager?.requestLocation()
     }
 }
 extension BLEManager: CBCentralManagerDelegate {
@@ -203,9 +215,31 @@ extension BLEManager: CBPeripheralDelegate {
         if value == "1" {
             sosTriggered = true
             sendSOSNotification()
+            grabLocationOnce()
         } else {
             sosTriggered = false
         }
     }
 }
+//Delegate to get the user location at time of SOS pressing
+extension BLEManager: CLLocationManagerDelegate {
 
+    func locationManager(_ manager: CLLocationManager,
+                         didUpdateLocations locations: [CLLocation]) {
+
+        guard let location = locations.last else { return }
+
+        let latitude = location.coordinate.latitude
+        let longitude = location.coordinate.longitude
+
+        print("Latitude: \(latitude)")
+        print("Longitude: \(longitude)")
+
+        // TODO: Send to server here
+    }
+
+    func locationManager(_ manager: CLLocationManager,
+                         didFailWithError error: Error) {
+        print("Location error: \(error.localizedDescription)")
+    }
+}
