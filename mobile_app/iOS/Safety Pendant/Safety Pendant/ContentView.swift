@@ -8,39 +8,48 @@
 import SwiftUI
 // in-app vibration feedback
 import CoreHaptics
+import FirebaseAuth
+import FirebaseFirestore
 
 struct ContentView: View {
     @StateObject private var bleManager = BLEManager()
     @State private var showingAlert = false //alert showing?
     @State private var engine: CHHapticEngine? //Vibration
-    
+    @StateObject private var auth = AuthManager()
     //show pendant status
     var body: some View {
-        VStack(spacing: 20) {
-            Text(bleManager.statusText)
-                .foregroundColor(.gray)
-                .padding()
-    //Button to scan for the pendant
-            if !bleManager.isConnected {
-                Button("Scan for Pendant") {
-                    bleManager.startScan()
-                }
-                .padding()
+        Group {
+            if auth.user == nil {
+                LoginView()
+                    .environmentObject(auth)
             } else {
-                Button("Disconnect Device") {
-                    bleManager.disconnect()
+                VStack(spacing: 20) {
+                    Text(bleManager.statusText)
+                        .foregroundColor(.gray)
+                        .padding()
+                    //Button to scan for the pendant
+                    if !bleManager.isConnected {
+                        Button("Scan for Pendant") {
+                            bleManager.startScan()
+                        }
+                        .padding()
+                    } else {
+                        Button("Disconnect Device") {
+                            bleManager.disconnect()
+                        }
+                        .padding()
+                        .foregroundColor(.red)
+                    }
                 }
-                .padding()
-                .foregroundColor(.red)
             }
         }
-    //Prepare haptics & initially ask for notification permissions when ContentView is loaded on the screen
+        //Prepare haptics & initially ask for notification permissions when ContentView is loaded on the screen
         .onAppear{
             bleManager.requestNotificationPermission() //permission pop-up
             prepareHaptics()
         }
         //Listen for changes in BLEManager trigger
-        .onChange(of: bleManager.sosTriggered) { oldValue,newValue in
+        .onChange(of: bleManager.sosTriggered) { oldValue, newValue in
             // Trigger SOS actions when button pressed
             if newValue {
                 triggerHaptic()

@@ -20,3 +20,6 @@ Packages/
 *.tmp
 *.bak
 *.swp
+
+#Firebase
+*GoogleService-Info.plist
