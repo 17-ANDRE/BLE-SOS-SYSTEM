@@ -15,7 +15,7 @@ struct ContentView: View {
     @StateObject private var bleManager = BLEManager()
     @State private var showingAlert = false //alert showing?
     @State private var engine: CHHapticEngine? //Vibration
-    @StateObject private var auth = AuthManager()
+    @StateObject private var auth = AuthManager.shared
     //show pendant status
     var body: some View {
         Group {
@@ -40,6 +40,12 @@ struct ContentView: View {
                         .padding()
                         .foregroundColor(.red)
                     }
+                    
+                    Button("Sign Out") {
+                                auth.signOut()
+                            }
+                            .padding()
+                            .foregroundColor(.red)
                 }
             }
         }
