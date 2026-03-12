@@ -11,6 +11,8 @@ import Combine    //To update the UI
 import UserNotifications //To add banner alerts
 import AudioToolbox //To implement background vibrations
 import CoreLocation //To get location of the user
+import FirebaseFirestore //storage of events to cloud
+import FirebaseAuth //Ensuring user is signed in
 
 //class for the entire BLE Management(scanning,connecting and notifications)
 class BLEManager: NSObject, ObservableObject {
@@ -235,7 +237,24 @@ extension BLEManager: CLLocationManagerDelegate {
         print("Latitude: \(latitude)")
         print("Longitude: \(longitude)")
 
-        // TODO: Send to server here
+        // Make sure user is signed in before saving alert
+        guard let uid = Auth.auth().currentUser?.uid else {
+            print("No user logged in, alert not saved")
+            return
+        }
+        //storage of events to database
+        let db = Firestore.firestore()
+        let alertData: [String: Any] = [
+            "latitude": latitude,
+            "longitude": longitude,
+            "timestamp": FieldValue.serverTimestamp(), //write the exact time the SOS was triggered
+            "triggered": true
+        ]
+        //Database management and creation of a new document with each event
+        db.collection("users")
+          .document(uid)
+          .collection("alerts")
+          .addDocument(data: alertData)
     }
 
     func locationManager(_ manager: CLLocationManager,
