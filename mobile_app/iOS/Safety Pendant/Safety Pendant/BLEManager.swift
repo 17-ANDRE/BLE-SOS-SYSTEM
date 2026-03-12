@@ -248,7 +248,9 @@ extension BLEManager: CLLocationManagerDelegate {
             "latitude": latitude,
             "longitude": longitude,
             "timestamp": FieldValue.serverTimestamp(), //write the exact time the SOS was triggered
-            "triggered": true
+            "triggered": true,
+            "notifiedContacts": [],
+            "status": "pending"
         ]
         //Database management and creation of a new document with each event
         db.collection("users")
